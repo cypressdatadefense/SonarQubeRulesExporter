@@ -18,3 +18,16 @@ public class RulesResponse
     public int Total { get; set; }
     public List<Rule> Rules { get; set; } = [];
 }
+
+public class QualityProfile
+{
+    public string Key { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Language { get; set; } = "";
+    public string LanguageName { get; set; } = "";
+}
+
+public class QualityProfilesResponse
+{
+    public List<QualityProfile> Profiles { get; set; } = [];
+}
