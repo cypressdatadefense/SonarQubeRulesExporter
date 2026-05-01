@@ -1,25 +1,28 @@
 using SonarQubeRulesExporter.Models;
 using SonarQubeRulesExporter.Services;
 
-if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+var asJson = args.Contains("--json");
+var positional = args.Where(a => a != "--json").ToArray();
+
+if (positional.Length == 0 || string.IsNullOrWhiteSpace(positional[0]))
 {
-    Console.Error.WriteLine("Usage: SonarQubeRulesExporter <sonarqube-url> [profile-name[,profile-name...]]");
+    Console.Error.WriteLine("Usage: SonarQubeRulesExporter <sonarqube-url> [profile-name[,profile-name...]] [--json]");
     return 1;
 }
 
-var url = args[0];
-var profileNames = args.Length > 1 && !string.IsNullOrWhiteSpace(args[1])
-    ? args[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+var url = positional[0];
+var profileNames = positional.Length > 1 && !string.IsNullOrWhiteSpace(positional[1])
+    ? positional[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     : [];
 
 List<Rule> rules;
-string fileName;
+string baseName;
 
 if (profileNames.Length == 0)
 {
     Console.WriteLine($"Fetching rules from {url}...");
     rules = await RestParser.GetRulesAsync(url);
-    fileName = "RULE_SET.xlsx";
+    baseName = "RULE_SET";
 }
 else
 {
@@ -46,9 +49,9 @@ else
     }
 
     rules = byKey.Values.ToList();
-    fileName = profileNames.Length == 1
-        ? $"RULE_SET_{Sanitize(profileNames[0])}.xlsx"
-        : "RULE_SET_PROFILES.xlsx";
+    baseName = profileNames.Length == 1
+        ? $"RULE_SET_{Sanitize(profileNames[0])}"
+        : "RULE_SET_PROFILES";
 }
 
 Console.WriteLine($"Fetched {rules.Count} rules.");
@@ -58,7 +61,13 @@ var grouped = rules
     .GroupBy(r => r.Lang)
     .ToDictionary(g => g.Key, g => g.ToList());
 
-ExcelService.Export(grouped, fileName);
+var fileName = asJson ? $"{baseName}.json" : $"{baseName}.xlsx";
+
+if (asJson)
+    JsonService.Export(grouped, fileName);
+else
+    ExcelService.Export(grouped, fileName);
+
 Console.WriteLine($"Generated File - {fileName}");
 return 0;
 
